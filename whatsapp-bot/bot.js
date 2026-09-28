@@ -64,9 +64,8 @@ http.createServer((req, res) => {
             </body>
             </html>
         `);
-    }
-}).listen(PORT, () => {
-    console.log(`🌐 Bot web server & QR portal listening on port ${PORT}`);
+}).listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 Bot web server & QR portal listening on 0.0.0.0:${PORT}`);
 });
 
 // 1. Initialize Gemini AI
@@ -118,7 +117,10 @@ const client = new Client({
             '--disable-gpu',
             '--disable-dev-shm-usage',
             '--disable-extensions',
-            '--no-first-run'
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-accelerated-2d-canvas'
         ]
     }
 });
