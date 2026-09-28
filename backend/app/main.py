@@ -23,24 +23,29 @@ from app.db.base import Base
 async def lifespan(app: FastAPI):
     """
     Application lifespan handling startup initializations and shutdown cleanups.
-    Auto-creates database tables in development mode.
+    Auto-creates database tables and gracefully falls back to SQLite if primary DB is unavailable.
     """
     logger.info(f"Starting {settings.APP_NAME} in [{settings.ENVIRONMENT}] mode...")
+    from app.db import session as db_session
     try:
         # Create database tables if they do not exist
-        async with engine.begin() as conn:
+        async with db_session.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database schema verified and initialized.")
     except Exception as e:
-        logger.warning(
-            f"Database auto-migration skipped or connection deferred: {e}. "
-            "Ensure MySQL is running and Alembic migrations are executed."
-        )
+        logger.warning(f"Primary database connection failed: {e}. Falling back to SQLite...")
+        try:
+            fallback_engine = db_session.switch_to_sqlite()
+            async with fallback_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("SQLite database fallback successfully initialized with all tables.")
+        except Exception as fallback_err:
+            logger.error(f"Failed to initialize SQLite fallback: {fallback_err}")
 
     yield
 
     logger.info("Shutting down application and disposing connection pools...")
-    await engine.dispose()
+    await db_session.engine.dispose()
     logger.info("Cleanup complete.")
 
 

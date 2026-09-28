@@ -1,17 +1,23 @@
 import axios from 'axios';
 import { tokenStorage } from '../utils/tokenStorage';
-const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api\/v1$/, '');
-const BASE_URL = `${API_URL}/api/v1`;
+export function getBackendBaseUrl() {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim();
+  const storedUrl = (typeof window !== 'undefined' ? localStorage.getItem('VITE_API_URL') || '' : '').trim();
+  const rawUrl = envUrl || storedUrl;
+  const cleanUrl = rawUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
+  return cleanUrl ? `${cleanUrl}/api/v1` : '/api/v1';
+}
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: getBackendBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 90000,
 });
 
 // ── Request interceptor: attach access token ─────────────────
 api.interceptors.request.use(
   (config) => {
+    config.baseURL = getBackendBaseUrl();
     const token = tokenStorage.getAccess();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

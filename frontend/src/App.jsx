@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import LoginPage    from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ChatPage     from './pages/ChatPage';
+import { ApiUrlModal } from './components/common/ApiUrlModal';
 
 export default function App() {
   return (
@@ -52,6 +53,9 @@ export default function App() {
               {/* Default redirect */}
               <Route path="*" element={<Navigate to="/chat" replace />} />
             </Routes>
+
+            {/* In-app API Server Connection Modal */}
+            <ApiUrlModal />
           </ErrorBoundary>
         </ChatProvider>
       </AuthProvider>

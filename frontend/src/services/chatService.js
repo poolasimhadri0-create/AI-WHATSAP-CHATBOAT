@@ -1,7 +1,5 @@
-import api from './api';
+import api, { getBackendBaseUrl } from './api';
 import { tokenStorage } from '../utils/tokenStorage';
-const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '').replace(/\/api\/v1$/, '');
-const BASE = `${API_URL}/api/v1`;
 
 export const chatService = {
   /** List all conversations for current user */
@@ -38,8 +36,9 @@ export const chatService = {
     const token = tokenStorage.getAccess();
 
     let response;
+    const base = getBackendBaseUrl();
     try {
-      response = await fetch(`${BASE}/chat/send`, {
+      response = await fetch(`${base}/chat/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
