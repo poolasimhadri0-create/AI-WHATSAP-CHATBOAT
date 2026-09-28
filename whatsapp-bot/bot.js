@@ -78,8 +78,40 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 
 async function generateAiReply(userText) {
-    // List of reliable models in order of priority
-    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+    const groqKey = process.env.GROQ_API_KEY;
+    if (groqKey) {
+        try {
+            const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${groqKey}`
+                },
+                body: JSON.stringify({
+                    model: 'qwen/qwen3.8-27b',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'You are an intelligent AI assistant responding on WhatsApp. Keep replies friendly, conversational, and concise for mobile screens.'
+                        },
+                        { role: 'user', content: userText }
+                    ],
+                    max_tokens: 300,
+                    temperature: 0.7
+                })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                const reply = data.choices?.[0]?.message?.content?.trim();
+                if (reply) return reply;
+            }
+        } catch (groqErr) {
+            console.warn('⚠️ Groq attempt failed in bot.js, falling back to Gemini:', groqErr?.message || groqErr);
+        }
+    }
+
+    // List of active Gemini models in order of priority
+    const modelsToTry = ['gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
     let lastError = null;
 
     for (const modelName of modelsToTry) {
@@ -98,7 +130,7 @@ async function generateAiReply(userText) {
             console.warn(`⚠️ Model "${modelName}" failed (${err?.message || err}). Trying fallback model...`);
         }
     }
-    throw lastError || new Error('All Gemini models are temporarily unavailable.');
+    throw lastError || new Error('All models are temporarily unavailable.');
 }
 
 // 2. Initialize WhatsApp Web Client

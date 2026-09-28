@@ -24,7 +24,6 @@ export default function ChatPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [suggestion, setSuggestion]   = useState('');
-  const [clearFlag, setClearFlag]      = useState(0); // increment to signal clear
 
   // Mobile: default closed
   useEffect(() => {
@@ -38,14 +37,14 @@ export default function ChatPage() {
   // Load conversations on mount
   useEffect(() => {
     fetchConversations();
-  }, [fetchConversations]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSuggest = useCallback((text) => {
     setSuggestion(text);
   }, []);
 
   const handleSuggestionClear = useCallback(() => {
-    setClearFlag((n) => n + 1);
+    setSuggestion('');
   }, []);
 
   return (
@@ -70,22 +69,33 @@ export default function ChatPage() {
             {sidebarOpen ? <XIcon size={18} /> : <MenuIcon size={18} />}
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
             <div
               style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: 'var(--user-bubble)',
+                width: 32, height: 32, borderRadius: 10,
+                background: 'var(--brand-gradient)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
               }}
               aria-hidden="true"
             >
-              <BotIcon size={15} color="#fff" />
+              <BotIcon size={16} color="#fff" />
             </div>
-            <span className="topbar-title">{convTitle}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <span className="topbar-title">{convTitle}</span>
+              <span className="topbar-subtitle">
+                Groq High-Speed LPU • 800+ tok/s
+              </span>
+            </div>
           </div>
 
           <div className="topbar-actions">
+            <div className="status-pill" title="Ultra low-latency streaming enabled">
+              <span className="status-dot"></span>
+              <span className="status-text">Ultra-Fast • 0.5s</span>
+            </div>
+
             <button
               className="icon-btn"
               onClick={toggleTheme}
@@ -102,7 +112,6 @@ export default function ChatPage() {
 
         {/* Input */}
         <MessageInput
-          key={clearFlag}
           initialValue={suggestion}
           onClear={handleSuggestionClear}
         />

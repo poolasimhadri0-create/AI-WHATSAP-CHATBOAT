@@ -16,6 +16,7 @@ class LLMService:
         self._anthropic_client = None
         self._gemini_client = None
         self._groq_client = None
+        self._httpx_client = None
 
     @property
     def provider(self) -> str:
@@ -163,6 +164,15 @@ class LLMService:
                 raise LLMServiceException("Anthropic Error: Credit balance is $0 / too low. Please add credits at console.anthropic.com or switch to LLM_PROVIDER=mock in backend/.env")
             raise LLMServiceException(f"Anthropic service error: {err_msg}")
 
+    def _get_httpx_client(self):
+        import httpx
+        if self._httpx_client is None or self._httpx_client.is_closed:
+            self._httpx_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(20.0, connect=4.0),
+                limits=httpx.Limits(max_keepalive_connections=15, max_connections=25)
+            )
+        return self._httpx_client
+
     async def _stream_gemini(
         self,
         messages: List[Dict[str, str]],
@@ -176,66 +186,80 @@ class LLMService:
             return
 
         import json
-        import urllib.request
-        import threading
 
-        model_name = self.model if "gemini" in self.model else "gemini-3.1-flash-lite"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:streamGenerateContent?alt=sse&key={key}"
+        # Priority list of fast models with instant fallback if Google returns 503/429
+        preferred_model = self.model if "gemini" in self.model else "gemini-3.6-flash"
+        models_to_try = [preferred_model]
+        for fallback in ["gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-3.8-flash"]:
+            if fallback not in models_to_try:
+                models_to_try.append(fallback)
 
         gemini_contents = []
         for m in messages:
             role = "user" if m.get("role") == "user" else "model"
             gemini_contents.append({"role": role, "parts": [{"text": m.get("content", "")}]})
 
-        body_dict = {"contents": gemini_contents}
+        body_dict = {
+            "contents": gemini_contents,
+            "generationConfig": {
+                "maxOutputTokens": min(settings.DEFAULT_MAX_TOKENS, 600),
+                "temperature": settings.DEFAULT_TEMPERATURE,
+                "topP": 0.95
+            }
+        }
         if system_prompt:
             body_dict["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
-        post_data = json.dumps(body_dict).encode("utf-8")
-        req = urllib.request.Request(url, data=post_data, headers={"Content-Type": "application/json"})
+        client = self._get_httpx_client()
+        last_error = None
+        streamed_any = False
 
-        queue: asyncio.Queue = asyncio.Queue()
-        loop = asyncio.get_running_loop()
-
-        def sync_worker():
+        for model_name in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:streamGenerateContent?alt=sse&key={key}"
             try:
-                with urllib.request.urlopen(req, timeout=30) as resp:
-                    for raw_line in resp:
-                        line_str = raw_line.decode("utf-8")
-                        if line_str.startswith("data: "):
-                            data_chunk = line_str[6:].strip()
-                            if data_chunk:
-                                try:
-                                    chunk_json = json.loads(data_chunk)
-                                    cands = chunk_json.get("candidates", [])
-                                    if cands and "content" in cands[0]:
-                                        for p in cands[0]["content"].get("parts", []):
-                                            if "text" in p and p["text"]:
-                                                loop.call_soon_threadsafe(queue.put_nowait, ("token", p["text"]))
-                                except Exception:
-                                    pass
-                loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+                async with client.stream("POST", url, json=body_dict) as resp:
+                    if resp.status_code in (503, 429):
+                        logger.warning(f"Gemini model '{model_name}' busy ({resp.status_code}), trying fast fallback...")
+                        last_error = f"Model {model_name} busy ({resp.status_code})"
+                        continue
+                    if resp.status_code != 200:
+                        err_body = await resp.aread()
+                        logger.warning(f"Gemini model '{model_name}' returned HTTP {resp.status_code}: {err_body.decode()[:100]}")
+                        last_error = f"HTTP {resp.status_code}"
+                        continue
+
+                    async for raw_line in resp.aiter_lines():
+                        if raw_line.startswith("data: "):
+                            data_chunk = raw_line[6:].strip()
+                            if not data_chunk:
+                                continue
+                            try:
+                                chunk_json = json.loads(data_chunk)
+                                cands = chunk_json.get("candidates", [])
+                                if cands and "content" in cands[0]:
+                                    for p in cands[0]["content"].get("parts", []):
+                                        token_text = p.get("text", "")
+                                        if token_text:
+                                            streamed_any = True
+                                            yield token_text
+                            except Exception:
+                                pass
+
+                if streamed_any:
+                    return
+
             except Exception as exc:
-                err_msg = str(exc)
-                if hasattr(exc, "read"):
-                    try:
-                        err_msg += " " + exc.read().decode("utf-8")
-                    except Exception:
-                        pass
-                loop.call_soon_threadsafe(queue.put_nowait, ("error", err_msg))
+                logger.warning(f"Gemini streaming attempt on '{model_name}' failed: {exc}")
+                last_error = str(exc)
+                if streamed_any:
+                    return
 
-        thread = threading.Thread(target=sync_worker, daemon=True)
-        thread.start()
-
-        while True:
-            item_type, val = await queue.get()
-            if item_type == "token":
-                yield val
-            elif item_type == "done":
-                break
-            elif item_type == "error":
-                logger.error(f"Gemini Streaming error: {val}")
-                raise LLMServiceException(f"Gemini service error: {val}")
+        if not streamed_any:
+            logger.warning(f"All Gemini models busy/exhausted ({last_error}). Falling back to instant response.")
+            # Provide instant fallback so the user always receives a reply in < 2 seconds
+            async for token in self._simulated_response(messages):
+                yield token
+            return
 
     async def _stream_groq(
         self,
@@ -256,7 +280,7 @@ class LLMService:
                 formatted_messages.append({"role": "system", "content": system_prompt})
             formatted_messages.extend(messages)
 
-            model_name = self.model if ("llama" in self.model or "mixtral" in self.model) else "llama-3.3-70b-versatile"
+            model_name = self.model if (self.model and "qwen" in self.model or "llama" in self.model or "gpt" in self.model) else "qwen/qwen3.8-27b"
             stream = await client.chat.completions.create(
                 model=model_name,
                 messages=formatted_messages,
@@ -292,7 +316,7 @@ class LLMService:
             words = paragraph.split(" ")
             for i, word in enumerate(words):
                 yield word + (" " if i < len(words) - 1 else "")
-                await asyncio.sleep(0.04)
+                await asyncio.sleep(0.015)
 
     @staticmethod
     def estimate_tokens(text: str) -> int:

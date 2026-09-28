@@ -13,15 +13,6 @@ export const MessageInput = memo(function MessageInput({ initialValue = '', onCl
   const [text, setText] = useState(initialValue);
   const textareaRef = useRef(null);
 
-  // Auto-fill from suggestion chips
-  useEffect(() => {
-    if (initialValue) {
-      setText(initialValue);
-      textareaRef.current?.focus();
-      if (onClear) onClear();
-    }
-  }, [initialValue, onClear]);
-
   // Auto-resize textarea
   const resize = useCallback(() => {
     const el = textareaRef.current;
@@ -29,6 +20,18 @@ export const MessageInput = memo(function MessageInput({ initialValue = '', onCl
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, []);
+
+  // Auto-fill from suggestion chips
+  useEffect(() => {
+    if (initialValue) {
+      setText(initialValue);
+      setTimeout(() => {
+        resize();
+        textareaRef.current?.focus();
+      }, 0);
+      if (onClear) onClear();
+    }
+  }, [initialValue, onClear, resize]);
 
   const handleChange = useCallback((e) => {
     setText(e.target.value);

@@ -84,6 +84,31 @@ const markdownComponents = {
   },
 };
 
+/* ── Copy message button ──────────────────────────────────── */
+function CopyResponseButton({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <button
+      className={`copy-msg-btn ${copied ? 'copied' : ''}`}
+      onClick={handleCopy}
+      aria-label={copied ? 'Copied' : 'Copy response'}
+      title="Copy entire response"
+    >
+      {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
+      <span>{copied ? 'Copied' : 'Copy'}</span>
+    </button>
+  );
+}
+
 /* ── Message Bubble ───────────────────────────────────────── */
 export const MessageBubble = memo(function MessageBubble({ message }) {
   const isUser = message.role === 'user';
@@ -116,9 +141,12 @@ export const MessageBubble = memo(function MessageBubble({ message }) {
 
         {/* Meta info */}
         <div className="msg-meta">
-          {formatTime(message.createdAt)}
+          <span>{formatTime(message.createdAt)}</span>
+          {!isUser && !message.streaming && message.content && (
+            <CopyResponseButton text={message.content} />
+          )}
           {message.tokens > 0 && (
-            <span className="token-badge" style={{ marginLeft: 6 }}>
+            <span className="token-badge">
               {message.tokens} tkn
             </span>
           )}

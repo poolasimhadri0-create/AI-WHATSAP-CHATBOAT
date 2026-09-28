@@ -55,8 +55,15 @@ const ConvItem = memo(function ConvItem({ conv, isActive, onSelect, onDelete }) 
 });
 
 /** Full conversation list */
-export const ConversationList = memo(function ConversationList() {
+export const ConversationList = memo(function ConversationList({ onItemClick }) {
   const { conversations, activeConvId, loadConversation, deleteConversation, loadingConvs } = useChat();
+
+  const handleSelect = (id) => {
+    loadConversation(id);
+    if (onItemClick && window.innerWidth <= 768) {
+      onItemClick();
+    }
+  };
 
   if (loadingConvs) return <ConvSkeleton />;
 
@@ -77,7 +84,7 @@ export const ConversationList = memo(function ConversationList() {
           key={conv.id}
           conv={conv}
           isActive={conv.id === activeConvId}
-          onSelect={loadConversation}
+          onSelect={handleSelect}
           onDelete={deleteConversation}
         />
       ))}
@@ -86,12 +93,20 @@ export const ConversationList = memo(function ConversationList() {
 });
 
 /** New Chat button */
-export const NewChatButton = memo(function NewChatButton() {
+export const NewChatButton = memo(function NewChatButton({ onClick }) {
   const { newChat } = useChat();
+
+  const handleClick = () => {
+    newChat();
+    if (onClick && window.innerWidth <= 768) {
+      onClick();
+    }
+  };
+
   return (
     <button
       className="btn-new-chat"
-      onClick={newChat}
+      onClick={handleClick}
       aria-label="Start new chat"
       id="new-chat-btn"
     >
@@ -132,15 +147,31 @@ export function Sidebar({ collapsed, onClose }) {
         {/* Header */}
         <div className="sidebar-header">
           <div className="sidebar-logo" aria-hidden="true">
-            <BotIcon size={17} color="#fff" />
+            <BotIcon size={18} color="#fff" />
           </div>
-          <span className="sidebar-title">AI Chat</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="sidebar-title">AI Chat</span>
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                color: '#fff',
+                padding: '2px 6px',
+                borderRadius: '6px',
+                textTransform: 'uppercase',
+              }}
+            >
+              TURBO
+            </span>
+          </div>
         </div>
 
         {/* Body */}
         <div className="sidebar-body">
-          <NewChatButton />
-          <ConversationList />
+          <NewChatButton onClick={onClose} />
+          <ConversationList onItemClick={onClose} />
         </div>
 
         {/* Footer – User info */}

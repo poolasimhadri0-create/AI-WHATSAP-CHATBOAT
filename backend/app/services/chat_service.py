@@ -117,7 +117,12 @@ class ChatService:
         # 5. Stream LLM tokens
         full_assistant_reply = []
         try:
-            async for chunk in llm_service.stream_chat_completion(context_messages):
+            fast_system_prompt = (
+                "You are a fast, intelligent, and helpful AI assistant. "
+                "Provide clear, accurate, and concise answers formatted nicely with markdown. "
+                "Be direct and avoid unnecessary fluff so answers are delivered rapidly."
+            )
+            async for chunk in llm_service.stream_chat_completion(context_messages, system_prompt=fast_system_prompt):
                 full_assistant_reply.append(chunk)
                 chunk_data = json.dumps({"token": chunk})
                 yield f"event: chunk\ndata: {chunk_data}\n\n"

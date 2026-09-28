@@ -3,39 +3,86 @@ import { useChat } from '../../context/ChatContext';
 import { MessageBubble, TypingIndicator } from './MessageBubble';
 import { BotIcon, SparklesIcon } from 'lucide-react';
 
-/* ── Empty state ──────────────────────────────────────────── */
-const SUGGESTIONS = [
-  '✨ Explain quantum computing simply',
-  '💡 Write a Python web scraper',
-  '🎨 Help me brainstorm startup ideas',
-  '📝 Summarize the latest AI research',
+/* ── Rich Suggestions ─────────────────────────────────────── */
+const SUGGESTION_CARDS = [
+  {
+    icon: '⚡',
+    badge: 'Code',
+    title: 'Python Async API',
+    desc: 'Write a high-performance FastAPI service with SSE streaming',
+    prompt: 'Write a complete, async Python FastAPI service with health check, CORS middleware, and streaming response.',
+  },
+  {
+    icon: '🧠',
+    badge: 'Concept',
+    title: 'Explain Quantum Physics',
+    desc: 'Break down superposition and qubits with intuitive analogies',
+    prompt: 'Explain quantum computing and superposition in simple terms with intuitive everyday analogies.',
+  },
+  {
+    icon: '🚀',
+    badge: 'Architecture',
+    title: 'Design a Scalable App',
+    desc: 'High-throughput system architecture with Redis & MySQL caching',
+    prompt: 'Design a scalable real-time architecture for an AI chatbot handling 50k concurrent users.',
+  },
+  {
+    icon: '✨',
+    badge: 'Productivity',
+    title: 'Draft Product Launch',
+    desc: 'Engaging, viral social media copy for a fast AI chatbot',
+    prompt: 'Draft an engaging Twitter and LinkedIn product launch announcement for a sub-second ultra-fast AI assistant.',
+  },
 ];
 
 function EmptyState({ onSuggest }) {
   return (
     <div className="empty-state" aria-label="Start a new conversation">
       <div className="empty-logo" aria-hidden="true">
-        <BotIcon size={36} color="#fff" />
+        <SparklesIcon size={38} color="#fff" />
       </div>
 
-      <div>
-        <h1 className="empty-title">How can I help you?</h1>
+      <div style={{ maxWidth: 560 }}>
+        <h1 className="empty-title">Where knowledge meets speed</h1>
         <p className="empty-subtitle">
-          Ask me anything — I can write code, explain concepts, analyze data,
-          draft documents, and much more.
+          Ask questions, debug code, brainstorm ideas, or analyze complex data.
+          Powered by low-latency LPU inference for instantaneous answers.
         </p>
       </div>
 
       <div className="empty-suggestions" role="list" aria-label="Suggested prompts">
-        {SUGGESTIONS.map((s) => (
+        {SUGGESTION_CARDS.map((card, idx) => (
           <button
-            key={s}
+            key={idx}
             className="suggestion-chip"
             role="listitem"
-            onClick={() => onSuggest(s.slice(2).trim())}
-            aria-label={`Try: ${s}`}
+            onClick={() => onSuggest(card.prompt)}
+            aria-label={`Try: ${card.title}`}
           >
-            {s}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: '18px' }} aria-hidden="true">{card.icon}</span>
+              <span
+                style={{
+                  fontSize: '10.5px',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: 'rgba(99, 102, 241, 0.15)',
+                  color: 'var(--accent-light)',
+                  border: '1px solid rgba(99, 102, 241, 0.25)'
+                }}
+              >
+                {card.badge}
+              </span>
+            </div>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', marginBottom: 3 }}>
+              {card.title}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+              {card.desc}
+            </div>
           </button>
         ))}
       </div>
