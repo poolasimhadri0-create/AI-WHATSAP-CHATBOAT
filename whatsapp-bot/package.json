@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-ai-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp Personal Auto-Responder powered by Gemini AI",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
+  }
+}

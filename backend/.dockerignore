@@ -1,0 +1,31 @@
+# Virtual environment & Python cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment files with sensitive credentials
+.env
+.env.local
+
+# Git & IDE files
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# Testing & Scratch files
+tests/
+scratch/
+*.log
+
+# Documentation and Docker files
+README.md
+docker-compose*.yml
+Dockerfile*

@@ -1,0 +1,43 @@
+# Python & Virtual Environments
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# WhatsApp Bot Session & Auth (CRITICAL: Never commit session keys!)
+.wwebjs_auth/
+.wwebjs_cache/
+whatsapp-bot/.wwebjs_auth/
+whatsapp-bot/.wwebjs_cache/
+
+# Environment Variables & Secrets (CRITICAL: Never commit API keys!)
+.env
+.env.local
+*.env
+backend/.env
+whatsapp-bot/.env
+frontend/.env
+
+# Build outputs
+frontend/dist/
+frontend/build/
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
