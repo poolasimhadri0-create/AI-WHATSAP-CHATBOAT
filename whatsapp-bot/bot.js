@@ -8,13 +8,65 @@ if (!process.env.GEMINI_API_KEY) {
     require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
 }
 
-// 0. Start simple HTTP server for Cloud Hosting Health Checks (Render / Railway)
+let latestQr = null;
+let isBotReady = false;
+
+// 0. HTTP server with visual QR code viewer for easy phone scanning
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('WhatsApp Personal AI Bot is running!\n');
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    if (isBotReady) {
+        res.end(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>WhatsApp AI Bot Status</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+            <body style="font-family:sans-serif;text-align:center;padding:50px 20px;background:#0b141a;color:#e9edef;">
+                <div style="max-width:400px;margin:0 auto;background:#111b21;padding:30px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+                    <div style="font-size:50px;margin-bottom:10px;">✅</div>
+                    <h2 style="color:#00a884;margin-bottom:8px;">Bot is Online & Connected!</h2>
+                    <p style="color:#8696a0;font-size:14px;">Anyone who messages your WhatsApp will receive AI replies automatically 24/7.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    } else if (latestQr) {
+        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=${encodeURIComponent(latestQr)}`;
+        res.end(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Scan WhatsApp QR Code</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <meta http-equiv="refresh" content="15">
+            </head>
+            <body style="font-family:sans-serif;text-align:center;padding:40px 16px;background:#0b141a;color:#e9edef;">
+                <div style="max-width:380px;margin:0 auto;background:#111b21;padding:24px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,0.6);">
+                    <h3 style="margin-top:0;color:#00a884;">📲 Link your WhatsApp</h3>
+                    <p style="color:#8696a0;font-size:13px;margin-bottom:18px;">
+                        Open <b>WhatsApp</b> on your phone &gt; <b>Linked Devices</b> &gt; <b>Link a Device</b>
+                    </p>
+                    <div style="background:#fff;padding:12px;border-radius:12px;display:inline-block;">
+                        <img src="${qrImgUrl}" alt="WhatsApp QR Code" width="280" height="280" style="display:block;" />
+                    </div>
+                    <p style="color:#8696a0;font-size:11px;margin-top:16px;">This page refreshes automatically when a new code is needed.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    } else {
+        res.end(`
+            <!DOCTYPE html>
+            <html>
+            <head><title>Starting Bot...</title><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="refresh" content="5"></head>
+            <body style="font-family:sans-serif;text-align:center;padding:50px 20px;background:#0b141a;color:#e9edef;">
+                <h2>⏳ Starting WhatsApp Web...</h2>
+                <p style="color:#8696a0;">Please wait 10-20 seconds. The QR code will appear here automatically.</p>
+            </body>
+            </html>
+        `);
+    }
 }).listen(PORT, () => {
-    console.log(`🌐 Bot health check server listening on port ${PORT}`);
+    console.log(`🌐 Bot web server & QR portal listening on port ${PORT}`);
 });
 
 // 1. Initialize Gemini AI
@@ -73,15 +125,20 @@ const client = new Client({
 
 // 3. Display QR Code for login
 client.on('qr', (qr) => {
+    latestQr = qr;
+    isBotReady = false;
     console.log('\n======================================================');
     console.log('📲 SCAN THIS QR CODE WITH YOUR WHATSAPP TO LINK BOT:');
     console.log('Open WhatsApp > 3 dots (or Settings) > Linked Devices > Link a Device');
+    console.log('Or view the clean image QR code at your bot web URL!');
     console.log('======================================================\n');
     qrcode.generate(qr, { small: true });
 });
 
 // 4. Bot is Ready
 client.on('ready', () => {
+    isBotReady = true;
+    latestQr = null;
     console.log('\n✅ WHATSAPP BOT IS ONLINE & READY!');
     console.log('Anyone who messages this WhatsApp number will now receive an AI reply.\n');
 });
