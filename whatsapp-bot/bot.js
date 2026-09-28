@@ -24,13 +24,30 @@ if (!apiKey) {
     process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({
-    model: 'gemini-3.5-flash-lite',
-    systemInstruction: 
-        'You are an intelligent AI assistant responding on behalf of the user on WhatsApp. ' +
-        'Keep replies friendly, conversational, and concise for mobile messaging. ' +
-        'Do not use complicated markdown or code blocks unless requested.'
-});
+
+async function generateAiReply(userText) {
+    // List of reliable models in order of priority
+    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+        try {
+            const m = genAI.getGenerativeModel({
+                model: modelName,
+                systemInstruction: 
+                    'You are an intelligent AI assistant responding on behalf of the user on WhatsApp. ' +
+                    'Keep replies friendly, conversational, and concise for mobile messaging. ' +
+                    'Do not use complicated markdown or code blocks unless requested.'
+            });
+            const result = await m.generateContent(userText);
+            return result.response.text();
+        } catch (err) {
+            lastError = err;
+            console.warn(`⚠️ Model "${modelName}" failed (${err?.message || err}). Trying fallback model...`);
+        }
+    }
+    throw lastError || new Error('All Gemini models are temporarily unavailable.');
+}
 
 // 2. Initialize WhatsApp Web Client
 const client = new Client({
@@ -92,9 +109,8 @@ client.on('message', async (msg) => {
     }
 
     try {
-        // 2. Ask Gemini AI
-        const result = await model.generateContent(userText);
-        const replyText = result.response.text();
+        // 2. Ask Gemini AI (with automatic fallback if Google servers are busy)
+        const replyText = await generateAiReply(userText);
 
         console.log(`🤖 AI Reply: "${replyText.substring(0, 100)}..."`);
 
