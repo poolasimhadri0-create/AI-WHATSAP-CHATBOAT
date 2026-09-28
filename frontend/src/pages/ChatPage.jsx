@@ -47,6 +47,10 @@ export default function ChatPage() {
     setSuggestion('');
   }, []);
 
+  const hasConfiguredApi = Boolean(
+    import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && localStorage.getItem('VITE_API_URL'))
+  );
+
   return (
     <div className="app-layout">
       {/* ── Sidebar ── */}
@@ -91,6 +95,20 @@ export default function ChatPage() {
           </div>
 
           <div className="topbar-actions">
+            <button
+              className="topbar-api-btn"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-api-modal'))}
+              title="Configure Backend API Server URL"
+              aria-label="Backend API Server Configuration"
+              id="api-server-btn"
+            >
+              <span
+                className="topbar-api-dot"
+                style={{ background: hasConfiguredApi ? '#10b981' : '#f59e0b' }}
+              />
+              <span className="topbar-api-text">API Server</span>
+            </button>
+
             <div className="status-pill" title="Ultra low-latency streaming enabled">
               <span className="status-dot"></span>
               <span className="status-text">Ultra-Fast • 0.5s</span>

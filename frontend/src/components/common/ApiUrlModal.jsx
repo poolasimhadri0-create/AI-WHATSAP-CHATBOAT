@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getBackendBaseUrl } from '../../services/api';
 
 export function ApiUrlModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [url, setUrl] = useState('');
+  const location = useLocation();
 
   const isLocal = typeof window !== 'undefined' && 
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const envUrl = import.meta.env.VITE_API_URL || '';
   const storedUrl = typeof window !== 'undefined' ? localStorage.getItem('VITE_API_URL') || '' : '';
+  const isChatPage = location.pathname === '/chat' || location.pathname === '/';
 
   useEffect(() => {
     // If running in production and no API URL is configured anywhere, open configuration automatically
@@ -16,6 +19,16 @@ export function ApiUrlModal() {
       setIsOpen(true);
     }
   }, [isLocal, envUrl, storedUrl]);
+
+  // Listen for custom open event (e.g. from topbar button on chat page)
+  useEffect(() => {
+    const handleOpen = () => {
+      setUrl(storedUrl || envUrl || '');
+      setIsOpen(true);
+    };
+    window.addEventListener('open-api-modal', handleOpen);
+    return () => window.removeEventListener('open-api-modal', handleOpen);
+  }, [storedUrl, envUrl]);
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -36,34 +49,28 @@ export function ApiUrlModal() {
 
   return (
     <>
-      {/* Floating button in bottom right to inspect or change API URL anytime */}
-      <button
-        onClick={() => {
-          setUrl(storedUrl || envUrl || '');
-          setIsOpen(true);
-        }}
-        style={{
-          position: 'fixed',
-          bottom: '12px',
-          right: '12px',
-          zIndex: 9999,
-          background: 'rgba(20, 24, 39, 0.85)',
-          color: '#94a3b8',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '20px',
-          padding: '6px 12px',
-          fontSize: '11px',
-          cursor: 'pointer',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-        }}
-        title="Configure Backend API Server URL"
-      >
-        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: (envUrl || storedUrl) ? '#10b981' : '#f59e0b' }} />
-        API Server
-      </button>
+      {/* Floating button at top right for non-chat pages (on chat page it sits inside the topbar) */}
+      {!isChatPage && (
+        <button
+          onClick={() => {
+            setUrl(storedUrl || envUrl || '');
+            setIsOpen(true);
+          }}
+          className="api-server-floating-btn"
+          title="Configure Backend API Server URL"
+          aria-label="Configure Backend API Server URL"
+        >
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: (envUrl || storedUrl) ? '#10b981' : '#f59e0b'
+            }}
+          />
+          API Server
+        </button>
+      )}
 
       {/* Modal dialog */}
       {isOpen && (
@@ -96,7 +103,8 @@ export function ApiUrlModal() {
             </p>
 
             <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
-              <strong>Currently using:</strong> <code style={{ color: '#60a5fa' }}>{currentConfig}</code>
+              <strong>Currently using:</strong>{' '}
+              <code style={{ color: '#60a5fa', wordBreak: 'break-all' }}>{currentConfig}</code>
             </div>
 
             <form onSubmit={handleSave}>
