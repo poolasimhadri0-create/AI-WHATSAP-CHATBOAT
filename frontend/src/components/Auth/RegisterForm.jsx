@@ -14,7 +14,7 @@ function validate({ name, email, password, confirm }) {
   else if (!/\S+@\S+\.\S+/.test(email)) errors.email = 'Enter a valid email';
 
   if (!password) errors.password = 'Password is required';
-  else if (password.length < 6) errors.password = 'Password must be at least 6 characters';
+  else if (password.length < 8) errors.password = 'Password must be at least 8 characters';
 
   if (!confirm) errors.confirm = 'Please confirm your password';
   else if (confirm !== password) errors.confirm = 'Passwords do not match';
@@ -46,7 +46,10 @@ export function RegisterForm() {
       toast.success('Account created! Welcome aboard 🎉');
       navigate('/chat');
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Registration failed. Please try again.';
+      const detail = err.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map((d) => d.msg || JSON.stringify(d)).join(', ')
+        : (typeof detail === 'string' ? detail : err.message || 'Registration failed. Please try again.');
       toast.error(msg);
     } finally {
       setLoading(false);

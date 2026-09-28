@@ -38,7 +38,10 @@ export function LoginForm() {
       toast.success('Welcome back! 👋');
       navigate('/chat');
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Login failed. Check your credentials.';
+      const detail = err.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map((d) => d.msg || JSON.stringify(d)).join(', ')
+        : (typeof detail === 'string' ? detail : err.message || 'Login failed. Check your credentials.');
       toast.error(msg);
     } finally {
       setLoading(false);
