@@ -64,6 +64,7 @@ http.createServer((req, res) => {
             </body>
             </html>
         `);
+    }
 }).listen(PORT, '0.0.0.0', () => {
     console.log(`🌐 Bot web server & QR portal listening on 0.0.0.0:${PORT}`);
 });
