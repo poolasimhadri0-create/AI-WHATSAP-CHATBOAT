@@ -2,12 +2,25 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
+const http = require('http');
+require('dotenv').config();
+if (!process.env.GEMINI_API_KEY) {
+    require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
+}
+
+// 0. Start simple HTTP server for Cloud Hosting Health Checks (Render / Railway)
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('WhatsApp Personal AI Bot is running!\n');
+}).listen(PORT, () => {
+    console.log(`🌐 Bot health check server listening on port ${PORT}`);
+});
 
 // 1. Initialize Gemini AI
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
-    console.error('❌ Error: GEMINI_API_KEY is not defined in backend/.env');
+    console.error('❌ Error: GEMINI_API_KEY is not defined.');
     process.exit(1);
 }
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -29,6 +42,7 @@ const client = new Client({
     },
     puppeteer: {
         headless: true,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
