@@ -119,8 +119,8 @@ const client = new Client({
             '--disable-dev-shm-usage',
             '--disable-extensions',
             '--no-first-run',
-            '--no-zygote',
-            '--single-process',
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
             '--disable-accelerated-2d-canvas'
         ]
     }
