@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { tokenStorage } from '../utils/tokenStorage';
-
-const BASE_URL = '/api/v1';
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const BASE_URL = `${API_URL}/api/v1`;
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -23,7 +23,7 @@ api.interceptors.request.use(
 
 // ── Response interceptor: handle 401 with refresh ────────────
 let isRefreshing = false;
-let failedQueue  = [];
+let failedQueue = [];
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {

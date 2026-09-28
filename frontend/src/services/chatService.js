@@ -1,7 +1,7 @@
 import api from './api';
 import { tokenStorage } from '../utils/tokenStorage';
-
-const BASE = '/api/v1';
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const BASE = `${API_URL}/api/v1`;
 
 export const chatService = {
   /** List all conversations for current user */
